@@ -1,5 +1,6 @@
 #include "rollingpitching.h"
 
+#include <petscviewerhdf5.h>
 #include <petibm/io.h>
 
 RollingPitchingSolver::RollingPitchingSolver(const MPI_Comm &world, const YAML::Node & node)
@@ -118,3 +119,42 @@ PetscErrorCode RollingPitchingSolver::setVelocityBodies(const PetscReal &ti)
 
     PetscFunctionReturn(0);
 } // RollingPitchingSolver::setVelocityBodies
+
+PetscErrorCode RollingPitchingSolver::writeLagrangianHDF5(
+    const std::string &filepath)
+{
+    PetscErrorCode ierr;
+
+    PetscFunctionBeginUser;
+
+    PetscViewer viewer;
+    ierr = PetscViewerCreate(comm, &viewer); CHKERRQ(ierr);
+    ierr = PetscViewerSetType(viewer, PETSCVIEWERHDF5); CHKERRQ(ierr);
+    ierr = PetscViewerFileSetMode(viewer, FILE_MODE_WRITE); CHKERRQ(ierr);
+    ierr = PetscViewerFileSetName(viewer, filepath.c_str()); CHKERRQ(ierr);
+
+    // go to the root node first (just in case, not necessary)
+    ierr = PetscViewerHDF5PushGroup(viewer, "/"); CHKERRQ(ierr);
+
+    // write the Lagrangian velocity
+    ierr = PetscObjectSetName((PetscObject)UB, "velocity"); CHKERRQ(ierr);
+    ierr = VecView(UB, viewer); CHKERRQ(ierr);
+
+    // destroy viewer
+    ierr = PetscViewerDestroy(&viewer); CHKERRQ(ierr);
+
+    PetscFunctionReturn(0);
+} // RollingPitchingSolver::writeLagrangianHDF5
+
+PetscErrorCode RollingPitchingSolver::writeBodyASCII(
+    const std::string &filepath)
+{
+    PetscErrorCode ierr;
+
+    PetscFunctionBeginUser;
+
+    petibm::type::SingleBody &body = bodies->bodies[0];
+    ierr = body->writeBody(filepath); CHKERRQ(ierr);
+
+    PetscFunctionReturn(0);
+} // RollingPitchingSolver::writeBodyASCII

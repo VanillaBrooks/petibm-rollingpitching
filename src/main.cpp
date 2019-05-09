@@ -1,3 +1,5 @@
+#include <iomanip>
+
 #include <petscsys.h>
 #include <yaml-cpp/yaml.h>
 
@@ -24,13 +26,34 @@ int main(int argc, char **argv)
     ierr = PetscPrintf(PETSC_COMM_WORLD,
                        "Completed initialization stage\n"); CHKERRQ(ierr);
 
-    // integrate the solution in time
-    while (!solver.finished())
+    PetscReal dt, t;
+    PetscInt nstart, ite, nt, nsave;
+    const YAML::Node &node = config["parameters"];
+    dt = node["dt"].as<PetscReal>();
+    nstart = node["startStep"].as<PetscInt>(0);
+    nt = node["nt"].as<PetscInt>();
+    nsave = node["nsave"].as<PetscInt>(1);
+    t = nstart * dt;
+    ite = nstart;
+
+    while (ite < nstart + nt)
     {
-        // compute the solution at the next time step
-        ierr = solver.advance(); CHKERRQ(ierr);
-        // output data to files
-        ierr = solver.write(); CHKERRQ(ierr);
+        t += dt;
+        ite += 1;
+        ierr = solver.setCoordinatesBodies(t); CHKERRQ(ierr);
+        ierr = solver.setVelocityBodies(t); CHKERRQ(ierr);
+        if (ite % nsave == 0)
+        {
+            std::stringstream ss;
+            std::string filepath;
+            ss << std::setfill('0') << std::setw(7) << ite;
+            filepath = config["output"].as<std::string>() + "/" + \
+                       ss.str() + ".h5";
+            ierr = solver.writeLagrangianHDF5(filepath); CHKERRQ(ierr);
+            filepath = config["output"].as<std::string>() + "/" + \
+                       ss.str() + ".3D";
+            ierr = solver.writeBodyASCII(filepath); CHKERRQ(ierr);
+        }
     }
 
     // destroy the decoupled IBPM solver

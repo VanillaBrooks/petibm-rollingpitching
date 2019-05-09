@@ -21,6 +21,11 @@ public:
 
     PetscErrorCode init(const MPI_Comm &world, const YAML::Node &node);
 
+    PetscErrorCode setCoordinatesBodies(const PetscReal &ti);
+    PetscErrorCode setVelocityBodies(const PetscReal &ti);
+    PetscErrorCode writeLagrangianHDF5(const std::string &filepath);
+    PetscErrorCode writeBodyASCII(const std::string &filepath);
+
 protected:
     PetscReal f;
     PetscReal A_phi;
@@ -31,8 +36,5 @@ protected:
     PetscReal Xc;
     PetscReal Yc;
     PetscReal Zc;
-
-    PetscErrorCode setCoordinatesBodies(const PetscReal &ti);
-    PetscErrorCode setVelocityBodies(const PetscReal &ti);
 
 }; // RollingPitchingSolver
